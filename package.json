@@ -65,6 +65,7 @@
     "@types/node": "^18.0.5",
     "immer": "^9.0.15",
     "jszip": "^3.10.1",
+    "pdfjs-dist": "^3.11.174",
     "rc-slider": "^10.1.0",
     "react": "^18.2.0",
     "react-colorful": "^5.6.1",
