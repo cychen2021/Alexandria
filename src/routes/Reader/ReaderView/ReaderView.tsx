@@ -1,6 +1,7 @@
 import React, { createRef } from 'react'; // we need this to make JSX compile
 import styles from './ReaderView.module.scss'
-import { Book, Rendition } from '@btpf/epubjs'
+import { Book as EPUBBook} from '@btpf/epubjs'
+import { Book, Rendition } from './Book'
 // import bookImport from '@resources/placeholder/childrens-literature.epub'
 
 import {
@@ -93,7 +94,7 @@ class Reader extends React.Component<ReaderProps>{
       bookValue = await getBookUrlByHash(this.props.bookHash);
       // Needed for special handling where book needs to be regenerated for comics when view style changes
       this.IS_COMIC_BOOK = COMIC_BOOK_FORMATS.includes(bookValue.split(".").slice(-1)[0])
-      this.book = (await createBookInstance(bookValue, this.props.bookHash)) as Book
+      this.book = new Book((await createBookInstance(bookValue, this.props.bookHash)) as EPUBBook)
     }
 
     if(this.book == undefined){
@@ -133,7 +134,7 @@ class Reader extends React.Component<ReaderProps>{
         myLocations = JSON.parse(await fs.readTextFile(locations_path))
         this.book.locations.load(myLocations)
       }else{
-        myLocations = await (this.book as Book).locations.generate(1024)
+        myLocations = await this.book.locations.generate(1024)
         fs.writeTextFile(locations_path, JSON.stringify(myLocations))
       }
 
@@ -356,7 +357,7 @@ class Reader extends React.Component<ReaderProps>{
         'continuous': 'continuous',  
       }
 
-      this.book = (await createBookInstance(bookValue, (this.props.bookHash as string), layouts[renderMode as keyof typeof layouts])) as Book
+      this.book = new Book((await createBookInstance(bookValue, (this.props.bookHash as string), layouts[renderMode as keyof typeof layouts])) as EPUBBook)
     }
     
     mySettings = {...mySettings, 

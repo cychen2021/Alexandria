@@ -3,8 +3,9 @@ import { AllowMouseEvent, setProgrammaticProgressUpdate, SetProgress, SkipMouseE
 import { LOADSTATE } from "@store/slices/constants";
 import { bookStateStructure } from "@store/slices/EpubJSBackend/epubjsManager.d";
 import store from "@store/store";
-import { Contents, Rendition } from '@btpf/epubjs';
-import View from "epubjs/types/managers/view";
+import { Contents } from '@btpf/epubjs';
+import { Rendition } from "../Book";
+import View from "@btpf/epubjs/types/managers/view";
 import { 
   CalculateBoxPosition, 
   NOTE_MODAL_HEIGHT, 
@@ -15,7 +16,7 @@ import {
 
 // import {bookStateStructure} from 'src/store/slices/EpubJSBackend/epubjsManager.d'
 
-export default (renditionInstance:Rendition, view:number)=>{
+export default (renditionInstance: Rendition, view: number)=>{
 
   // const renditionInstance = initialState.bookState["0"].instance;
   let NoteModalVisible!:boolean;
