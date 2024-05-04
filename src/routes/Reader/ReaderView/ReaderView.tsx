@@ -1,7 +1,8 @@
 import React, { createRef } from 'react'; // we need this to make JSX compile
 import styles from './ReaderView.module.scss'
 import { Book as EPUBBook} from '@btpf/epubjs'
-import { Book, Rendition } from './Book'
+import { Book } from './Book'
+import { Rendition } from '../wrapper';
 // import bookImport from '@resources/placeholder/childrens-literature.epub'
 
 import {
@@ -23,8 +24,8 @@ import {RemoveRendition, SetLoadState, SyncedAddRendition} from '@store/slices/b
 import registerHandlers from './functions/registerHandlers';
 import { Unsubscribe } from '@reduxjs/toolkit';
 import { LOADSTATE } from '@store/slices/constants';
-import { SyncedAddRenditionPayload } from '@store/slices/EpubJSBackend/epubjsManager';
-import { bookStateHydrationStructure } from '@store/slices/EpubJSBackend/epubjsManager.d';
+import { SyncedAddRenditionPayload } from "@store/slices/backendTypes";
+import { bookStateHydrationStructure } from '@store/slices/backendTypes.d';
 import { ToggleMenu } from '@store/slices/appState';
 import {getBookUrlByHash, createBookInstance} from '@shared/scripts/TauriActions'
 import { fs } from '@tauri-apps/api';
@@ -318,7 +319,7 @@ class Reader extends React.Component<ReaderProps>{
 
     /* Begin Book Load Pattern - Can be extracted into function in future */
     // Param: useRenderMode props (from settings) -> settings (If defined) -> default
-    let payload!:SyncedAddRenditionPayload;
+    let payload!: SyncedAddRenditionPayload;
     let result!: bookStateHydrationStructure;
 
     let firstLoad = false;

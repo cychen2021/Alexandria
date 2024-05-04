@@ -1,6 +1,7 @@
-import { Rendition } from '@btpf/epubjs'
+// import { Rendition as EPUBRendition, Rendition } from '@btpf/epubjs'
 import { LOADSTATE } from './constants'
 import { bookStateStructure } from "./EpubJSBackend/epubjsManager.d.ts"
+import { Rendition } from 'src/routes/Reader/wrapper'
 
 interface BackendInstance{
   instance: Rendition

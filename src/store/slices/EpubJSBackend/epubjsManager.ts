@@ -6,19 +6,19 @@ import { bookState } from "../bookState"
 
 
 // import { bookState } from "../bookStateSlice"
-import { BackendInstance, BookInstances } from "../bookStateTypes"
+import { BookInstances } from "../bookStateTypes"
 import { LOADSTATE } from "../constants"
-import { bookStateHydrationStructure, bookStateStructure, loadProgressUpdate } from "./epubjsManager.d"
+import { bookStateStructure, loadProgressUpdate } from "../backendTypes.d"
 
 import { epubjs_reducer } from "@store/slices/EpubJSBackend/epubjsManager.d"
 import { setFontThunk, setLineHeightThunk, setParagraphSpacingThunk, setTextAlignmentThunk, setThemeThunk, setWordSpacingThunk } from "./data/theme/themeManager"
 import { RootState } from "@store/store"
 import { MoveNoteModal, SetModalCFI } from "../appState"
-
-export type SyncedAddRenditionPayload = {firstLoad?:boolean, saveData:bookStateHydrationStructure} & BackendInstance
+import { SyncedAddRenditionPayload } from "@store/slices/backendTypes.d"
+import { Rendition as EPUBRendition} from '@btpf/epubjs';
 
 export const SyncedAddRendition = createAsyncThunk(
-  'bookState/SyncedAddRendition',
+  'bookState/SyncedAddRendition/epub',
   // if you type your function argument here
   async (renditionData: SyncedAddRenditionPayload, thunkAPI) => {
 
@@ -39,7 +39,7 @@ export const SyncedAddRendition = createAsyncThunk(
       const bookmarks = renditionData.saveData.data.bookmarks
       const highlights = renditionData.saveData.data.highlights
       
-      const renditionInstance = renditionData.instance
+      const renditionInstance = renditionData.instance as EPUBRendition
       
       for (const [cfiRange, value] of Object.entries(highlights)) {
         thunkAPI.dispatch(bookState.actions.AddHighlight({highlightRange:cfiRange, color:value.color, note:value.note, view:renditionData.UID}))
@@ -118,8 +118,8 @@ export const RenditionBuilder = (builder:ActionReducerMapBuilder<BookInstances>)
     // const readerMarginsToUse = action?.meta?.arg?.saveData?.data?.theme?.readerMargins ? action.meta.arg.saveData.data.theme.readerMargins: 75
     const renderModeToUse = action?.meta?.arg?.saveData?.data?.theme?.renderMode ? action.meta.arg.saveData.data.theme.renderMode: "default"
     const t:bookStateStructure = {
-      title: action.meta.arg.saveData.title || action.meta.arg.instance.book.packaging.metadata.title,
-      author: action.meta.arg.saveData.author || action.meta.arg.instance.book.packaging.metadata.creator,
+      title: action.meta.arg.saveData.title || (action.meta.arg.instance as EPUBRendition).book.packaging.metadata.title,
+      author: action.meta.arg.saveData.author || (action.meta.arg.instance as EPUBRendition).book.packaging.metadata.creator,
       modified: action.meta.arg.saveData.modified || Date.now(),
       instance: action.meta.arg.instance,
       UID: action.meta.arg.UID, 

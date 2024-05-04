@@ -2,7 +2,8 @@ import { createAsyncThunk, PayloadAction } from "@reduxjs/toolkit"
 import { RootState } from "@store/store";
 import { invoke } from "@tauri-apps/api";
 import { convertFileSrc } from "@tauri-apps/api/tauri";
-import { bookStateStructure, dataInterface, epubjs_reducer } from "../../epubjsManager.d"
+import { bookStateStructure, epubjs_reducer } from "../../epubjsManager.d"
+import { dataInterface } from "@store/slices/backendTypes";
 import { platform } from '@tauri-apps/api/os';
 
 let IS_LINUX:boolean|undefined = undefined
