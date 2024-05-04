@@ -1909,8 +1909,7 @@ dependencies = [
 [[package]]
 name = "javascriptcore-rs-sys"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "905fbb87419c5cde6e3269537e4ea7d46431f3008c5d057e915ef3f115e7793c"
+source = "git+https://github.com/cychen2021/javascriptcore-rs.git?branch=patch#7bc32c1188ccb4c8a40fcfe8dd09407174fee53b"
 dependencies = [
  "glib-sys",
  "gobject-sys",
@@ -4578,8 +4577,7 @@ dependencies = [
 [[package]]
 name = "webkit2gtk-sys"
 version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d76ca6ecc47aeba01ec61e480139dda143796abcae6f83bcddf50d6b5b1dcf3"
+source = "git+https://github.com/cychen2021/webkit2gtk-rs.git?branch=patch#0a27066f32238009902fa626daa661489092aab6"
 dependencies = [
  "atk-sys",
  "bitflags 1.3.2",

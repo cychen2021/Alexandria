@@ -36,3 +36,7 @@ default = [ "custom-protocol" ]
 custom-protocol = [ "tauri/custom-protocol" ]
 # This will be used for rust
 opt_once_cell = []
+
+[patch.crates-io]
+javascriptcore-rs-sys = { git = "https://github.com/cychen2021/javascriptcore-rs.git", branch = "patch" }
+webkit2gtk-sys = { git = "https://github.com/cychen2021/webkit2gtk-rs.git", branch = "patch" }
