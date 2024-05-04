@@ -8,7 +8,7 @@
 // https://users.rust-lang.org/t/add-unstable-feature-only-if-compiled-on-nightly/27886
 #![cfg_attr(feature = "opt_once_cell", feature(once_cell))]
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     env::{self, current_dir},
     fs::{self, File},
     io::{BufReader, Read, Write},
@@ -29,6 +29,10 @@ use tower_http::cors::CorsLayer;
 use tower_http::services::{ServeDir, ServeFile};
 
 extern crate reqwest;
+
+use font_kit::source::SystemSource;
+
+
 use std::io;
 use tauri::{api::path::app_data_dir, Manager};
 
@@ -56,7 +60,7 @@ async fn main() {
             let appDataDir = app_data_dir( app.config().as_ref()).unwrap();
 
             if cfg!(target_os = "windows") || cfg!(dev) {
-                let currentDir = env::current_dir().unwrap();
+                let currentDir = env::current_exe().unwrap().parent().unwrap().to_path_buf();
                 
                 let program_files_path = Path::new("C:\\Program Files");
                 // If the parent directory is Program Files, The file was installed
@@ -110,7 +114,6 @@ async fn main() {
             get_font_url,
             get_font_urls,
             download_font,
-            toggle_font,
             list_fonts,
             delete_font,
             set_global_themes,
@@ -118,9 +121,11 @@ async fn main() {
             set_settings,
             get_settings,
             delete_book,
-            get_config_path_js
+            get_config_path_js,
+            add_system_font,
+            list_system_fonts
         ])
-        .run(tauri::generate_context!())
+        .run(tauri::generate_context!()) // Create a ../dist folder if it there is an error on this line
         .expect("error while running tauri application");
 }
 
@@ -469,7 +474,11 @@ struct themePayload {
     #[serde(default)]
     lineHeight: i64,
     #[serde(default)]
-    renderMode: String
+    renderMode: String,
+    #[serde(default)]
+    paragraphSpacing: i64,
+    #[serde(default)]
+    textAlign: String,
 
 
 }
@@ -581,16 +590,33 @@ fn get_font_urls(name: &str) -> Option<Vec<String>> {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Default)]
-struct fontStatus {
-    #[serde(default)]
-    fontMap: HashMap<String, bool>,
+#[tauri::command]
+fn list_system_fonts() -> HashMap<String, HashSet<String>> {
+    let source = SystemSource::new();
+    let fonts = source.all_fonts().unwrap();
+
+    // let mut font_family_set:HashSet<String> = HashSet::new();
+    let mut font_family_map = HashMap::<String, HashSet<String>>::new();
+    for font in fonts {
+        if let Ok(font) = font.load() {
+            let properties = font.properties();
+            let mut result = font_family_map.entry(font.family_name()).or_insert(HashSet::new());
+            result.insert(properties.weight.0.to_string());
+        }
+    }
+    
+    return font_family_map;
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default)]
 struct fontsJSON {
     #[serde(default)]
-    fonts: fontStatus,
+    fonts: HashMap<String, bool>,
+    #[serde(default = "fontsJSONVersion")]
+    version: String
+}
+fn fontsJSONVersion() -> String {
+    "0.11".to_string()
 }
 
 #[tauri::command]
@@ -613,7 +639,7 @@ async fn download_font(url: &str, name: &str, weight: &str) -> Result<String, St
     // println!("File Hash: {}", &fontsPayload);
     println!("{:?}", serde_json::to_string_pretty(&fontsPayload).unwrap());
 
-    fontsPayload.fonts.fontMap.insert(format!("{name}"), true);
+    fontsPayload.fonts.insert(format!("{name}"), true);
 
     std::fs::write(
         get_font_folder_path().join("fonts.json"),
@@ -623,29 +649,9 @@ async fn download_font(url: &str, name: &str, weight: &str) -> Result<String, St
 }
 
 #[tauri::command]
-fn delete_font(name: &str) {
+async fn add_system_font(name: &str) -> Result<String, String> {
 
-    std::fs::remove_dir_all(get_font_folder_path().join(name));
 
-    let file = File::open(get_font_folder_path().join("fonts.json")).unwrap();
-
-    let reader = BufReader::new(file);
-
-    let json: serde_json::Value =
-        serde_json::from_reader(reader).expect("JSON was not well-formatted");
-
-    let mut fontsPayload: fontsJSON = serde_json::from_value(json).unwrap();
-
-    fontsPayload.fonts.fontMap.remove(name).unwrap();
-
-    std::fs::write(
-        get_font_folder_path().join("fonts.json"),
-        serde_json::to_string_pretty(&fontsPayload).unwrap(),
-    );
-}
-
-#[tauri::command]
-fn toggle_font(name: &str) {
 
     let file = File::open(get_font_folder_path().join("fonts.json")).unwrap();
 
@@ -658,7 +664,34 @@ fn toggle_font(name: &str) {
     // println!("File Hash: {}", &fontsPayload);
     println!("{:?}", serde_json::to_string_pretty(&fontsPayload).unwrap());
 
-    *fontsPayload.fonts.fontMap.get_mut(name).unwrap() = !fontsPayload.fonts.fontMap[name];
+    fontsPayload.fonts.insert(format!("{name}"), false);
+
+    std::fs::write(
+        get_font_folder_path().join("fonts.json"),
+        serde_json::to_string_pretty(&fontsPayload).unwrap(),
+    );
+    return Ok("Ok".to_string());
+}
+
+#[tauri::command]
+fn delete_font(name: &str) {
+
+    let folder_path = get_font_folder_path().join(name);
+    if folder_path.exists() {
+        std::fs::remove_dir_all(folder_path);
+    }
+    
+
+    let file = File::open(get_font_folder_path().join("fonts.json")).unwrap();
+
+    let reader = BufReader::new(file);
+
+    let json: serde_json::Value =
+        serde_json::from_reader(reader).expect("JSON was not well-formatted");
+
+    let mut fontsPayload: fontsJSON = serde_json::from_value(json).unwrap();
+
+    fontsPayload.fonts.remove(name).unwrap();
 
     std::fs::write(
         get_font_folder_path().join("fonts.json"),
@@ -667,7 +700,7 @@ fn toggle_font(name: &str) {
 }
 
 #[tauri::command]
-fn list_fonts() -> fontStatus {
+fn list_fonts() ->  HashMap<String, bool> {
     let file = File::open(get_font_folder_path().join("fonts.json")).unwrap();
     let reader = BufReader::new(file);
     let json: serde_json::Value =

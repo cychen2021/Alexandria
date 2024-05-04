@@ -1,11 +1,11 @@
 import { HideNoteModal, HideQuickbarModal, MoveNoteModal, MoveQuickbarModal, SelectSidebarMenu, SetDictionaryWord, SetModalCFI, SetSelectedRendition, ToggleMenu, ToggleThemeMenu } from "@store/slices/appState";
-import { AllowMouseEvent, setProgrammaticProgressUpdate, SetProgress, SkipMouseEvent } from "@store/slices/bookState";
+import { AllowMouseEvent, setProgrammaticProgressUpdate, SetProgress, SkipMouseEvent, ToggleBookmark } from "@store/slices/bookState";
 import { LOADSTATE } from "@store/slices/constants";
 import { bookStateStructure } from "@store/slices/EpubJSBackend/epubjsManager.d";
 import store from "@store/store";
-import { Contents } from '@btpf/epubjs';
-import { Rendition } from "../Book";
-import View from "@btpf/epubjs/types/managers/view";
+import { Contents, EpubCFI } from '@btpf/epubjs';
+import { Rendition } from "../Book"
+import View from "epubjs/types/managers/view";
 import { 
   CalculateBoxPosition, 
   NOTE_MODAL_HEIGHT, 
@@ -13,6 +13,7 @@ import {
   QUICKBAR_MODAL_HEIGHT, 
   QUICKBAR_MODAL_WIDTH 
 } from "./ModalUtility";
+import { handleLinkClick } from "@shared/scripts/handleLinkClick";
 
 // import {bookStateStructure} from 'src/store/slices/EpubJSBackend/epubjsManager.d'
 
@@ -23,6 +24,7 @@ export default (renditionInstance: Rendition, view: number)=>{
   let QuickbarModalVisible!:boolean;
   let selectedCFI!:string;
   let ThemeMenuActive!:boolean;
+  let menuActive!:boolean;
   let skipMouseEvent!:boolean
   let fontName!:string
   let DictionaryWord!:string
@@ -30,6 +32,9 @@ export default (renditionInstance: Rendition, view: number)=>{
   let loadState!:LOADSTATE
   let selectedRendition!:number
   let isDualReaderMode!:boolean
+  let footnoteActive!:boolean
+  let lineHeight!:number
+  let fontSize!:number
 
   let timer:any = null;
 
@@ -41,6 +46,7 @@ export default (renditionInstance: Rendition, view: number)=>{
 
 
   let oldThemeState = {};
+  let oldHighlightsLength = 0
   const unsubscribeRedux = store.subscribe(()=>{
     const newState = store.getState()
     const bookState:bookStateStructure = newState.bookState[view]
@@ -50,6 +56,7 @@ export default (renditionInstance: Rendition, view: number)=>{
     QuickbarModalVisible = newState?.appState?.state?.modals?.quickbarModal?.visible
     selectedCFI = newState.appState.state?.modals?.selectedCFI;
     ThemeMenuActive = newState.appState.state?.themeMenuActive;
+    menuActive = newState.appState.state.menuToggled
     skipMouseEvent = bookState?.state?.skipMouseEvent
     DictionaryWord = newState.appState.state?.dictionaryWord
     fontName = bookState?.data?.theme?.font
@@ -57,6 +64,11 @@ export default (renditionInstance: Rendition, view: number)=>{
     loadState = bookState?.loadState
     sidebarOpen = newState?.appState?.state?.sidebarMenuSelected
     viewMode = bookState?.data?.theme?.renderMode
+    footnoteActive = newState.appState.state.footnote.active
+
+    lineHeight = bookState?.data?.theme?.lineHeight
+    fontSize = bookState?.data?.theme?.fontSize
+
 
     if(selectedRendition != newState.appState.state.selectedRendition && QuickbarModalVisible){
       // If anything is highlighted, remove it.
@@ -77,12 +89,22 @@ export default (renditionInstance: Rendition, view: number)=>{
         redrawAnnotations()
 
       ],1)
+
+      return
     }
+
+    // Correct annotation height when a new annotation is created
+    const newHighlightLength = Object.keys(bookState.data?.highlights || []).length
+    if(oldHighlightsLength < newHighlightLength) correctHighlightHeight()
+    oldHighlightsLength = newHighlightLength
+
+
   })
 
   const scrollEventsHandler = (event) =>{
+    console.log("SCROLL EVENT HANDLER")
     // Prevent flipping pages when scrolling on valid elements
-    if(sidebarOpen || ThemeMenuActive || NoteModalVisible || DictionaryWord || (viewMode == "continuous")) return
+    if(sidebarOpen || ThemeMenuActive || NoteModalVisible || DictionaryWord || (viewMode == "continuous") || footnoteActive) return
 
     if(selectedRendition != view) return
 
@@ -104,14 +126,38 @@ export default (renditionInstance: Rendition, view: number)=>{
 
   const keyboardEventsHandler = (event) =>{
     if(view != selectedRendition) return
+
+    if(NoteModalVisible){
+      if(event.keyCode == 27){
+        store.dispatch(HideNoteModal())
+      }
+      
+      return
+    }
+
     if (event.keyCode == 40 || event.keyCode == 39) {
       renditionInstance.next()
     }
     if (event.keyCode == 37 || event.keyCode == 38) {
       renditionInstance.prev()
     }
-
-    if(event.ctrlKey && event.keyCode == 70){
+    if(event.ctrlKey && event.keyCode == 66){
+      if(!menuActive){
+        store.dispatch(ToggleMenu())
+      }
+      if(sidebarOpen != "Bookmarks"){
+        store.dispatch(SelectSidebarMenu("Bookmarks"))
+      }else{
+        store.dispatch(ToggleBookmark({view:selectedRendition, bookmarkLocation:renditionInstance.location.end.cfi}))
+      }
+       
+    }
+    if(event.keyCode === 114 || (event.ctrlKey && event.keyCode === 70)){
+      // This will prevent the native browser searchbar from showing when
+      // the user presses ctrl + f
+      event.preventDefault();
+      event.stopPropagation()
+      
       if(sidebarOpen){
         if(sidebarOpen == "Search"){
           store.dispatch(SelectSidebarMenu(false))
@@ -449,9 +495,47 @@ export default (renditionInstance: Rendition, view: number)=>{
   }
 
 
-  const redrawAnnotations = () => renditionInstance.views().forEach((view:View) => view.pane ? view.pane.render() : null)
-    
+  const redrawAnnotations = () => {
+    // This will reposition the annotations
+    renditionInstance.views().forEach((view:View) => view.pane ? view.pane.render() : null)
+  
 
+    correctHighlightHeight()
+
+  }
+    
+  const correctHighlightHeight = ()=>{
+    // This will correct the heights of the annotations
+    const AnnotationKeys = Object.keys(renditionInstance.annotations._annotations)
+
+    for (const annotationKey of AnnotationKeys){
+      // For each of the annotations in the book
+      const annotation = renditionInstance.annotations._annotations[annotationKey]
+
+      // If the mark is currently rendered
+      const mark = annotation.mark
+      if(!mark) continue
+
+      // Get the container element of the highlights
+      const containerHighlight = mark.element
+      if(!containerHighlight) continue
+
+      // Get the the highlight for each line
+      const highlightLines = containerHighlight.childNodes
+
+      for (const highlightLine of highlightLines){
+        // Recalculate the highlight size
+        // https://stackoverflow.com/a/47327417
+        const baseFontSize = 16;
+
+        const calculatedLineHeight = (lineHeight/100) * (fontSize/100) * baseFontSize
+        highlightLine.style.height = calculatedLineHeight
+      }
+
+
+
+    }
+  }
 
 
   // Handle case where epubJS dispatches it's own event (Like if the user scrolled onto a new page)
@@ -479,13 +563,88 @@ export default (renditionInstance: Rendition, view: number)=>{
     console.log("Book started")
   })
 
-  
+  // Each time a new section/chapter is opened (Which employs the scroll trick), this hook will run.
+  renditionInstance.hooks.content.register((contents, /*view*/) => {
+    //   // Adding windows tablet support
+    let prevSelection:string;
 
-  // const flexClickHandler = (e:any)=>{
-  //   if(e.target == flexContainer){
-  //     clickHandler(e)
-  //   }
-  // }
+    // We will override the window.oncontextmenu to prevent memory leaks
+    contents.window.oncontextmenu = ((event:PointerEvent) => {
+
+      // very first thing we do is prevent the event since this will allow submenus to appear
+      // (Though the main mini-menu will still appear no matter what on windows)
+      event.preventDefault();
+      event.stopPropagation();
+  
+      const cfiBase = contents.cfiBase
+      const contentsWindow = contents.window
+  
+      // We are now using the code from contents.js from epub.js to fit the arguemnts of the selectionHandler
+  
+      // We will add this functionality. On a windows surface, this represents
+      // when the edge mini-menu is closed using the three dots. Not the best,
+      // but the best that can be done it seems
+
+      // PointerID 1 is reserved for when the menu closes it seems. Lets use this.
+      if(event.pointerId != 1){
+        return
+      }
+  
+      const selection = contentsWindow.getSelection();
+      // Prevents case where text is still selected from before and one clicks on the text
+      if(selection.toString() == prevSelection || selection.toString() == '') return
+      prevSelection = selection.toString()
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if(!range.collapsed) {
+          // cfirange = this.section.cfiFromRange(range);
+          const cfirange = new EpubCFI(range, cfiBase).toString();
+          selectionHandler(cfirange, contentsWindow)
+        }
+      }
+      return false;
+    });
+
+
+
+    const links = contents.document.querySelectorAll('a:link')
+    // const links = []
+    Array.from(links).forEach(link => link.addEventListener('click', async e => {
+      e.stopPropagation()
+      e.preventDefault()
+
+
+      // console.log("CKLDSFS", contents.sectionIndex)
+      // console.log(renditionInstance.book.spine.spineItems)
+      const href = link.getAttribute('href')
+      handleLinkClick(renditionInstance, href)
+      // const resolveURL = (url, relativeTo) => {
+      //   // HACK-ish: abuse the URL API a little to resolve the path
+      //   // the base needs to be a valid URL, or it will throw a TypeError,
+      //   // so we just set a random base URI and remove it later
+      //   const base = 'https://example.invalid/'
+      //   return new URL(url, base + relativeTo).href.replace(base, '')
+      // }
+      // console.log(contents.sectionIndex, renditionInstance.location.start.index)
+      // console.log(href, resolveURL(href,
+      //   // From contents.sectionIndex -> id
+      //   renditionInstance.book.spine.spineItems[contents.sectionIndex].href))
+
+
+
+      
+    }, true))
+
+
+    // https://stackoverflow.com/a/60516136
+    // This fixes a bug where if custom fonts are injected using
+    // @font-face, the annotation calculations are performed on the default font
+    // and are offset. This redraws once all fonts finish loading.
+    contents.document.fonts.onloadingdone = () =>{
+      redrawAnnotations()
+    }
+
+  })
 
   const renditionAttachmentHandler = ()=>{
     backgroundElement = window.document.getElementById("reader-background")
@@ -497,10 +656,57 @@ export default (renditionInstance: Rendition, view: number)=>{
     }else{
       console.log("Error: Background container not found")
     }
-    
+    if(renditionInstance.manager){
+      renditionInstance.manager.container.onscroll = ()=>{
+        // This is all related to a bug that came up with the surface tablet support
+        // When the reader is in dual reader or single reader mode, a long horizontal element is created
+        // and that element has it's scroll modified when the page is flipped.
+        // When text is selected on the windows touch screens however, the autoscroll can kick in and
+        // scroll this "page". I can't find any CSS tricks to disable it, So we will use some JS
+        // Ensure we are not in continuous mode
+        if((viewMode == "continuous")){
+          return
+        }
+
+        // First we will check if this scroll event was triggered by touch
+        if(!currentlySelectingByTouch){
+          return
+        }
+        // ensure the instance manager exists
+        if(!renditionInstance.manager){
+          return
+        }
+
+        // If the position has been scrolled less than 100 pixels
+        // Then it is most likely not a page flip, and rather a scroll bug
+        // const newScrollLeft = renditionInstance.manager?.container.scrollLeft || 0
+        // console.log("Checking scroll offset: ", startingScrollLeft, newScrollLeft)
+        // if(newScrollLeft - startingScrollLeft < 100){
+
+        // We can check to see if there is selected text
+        // If there is anything selected, that means that we should definitely not be scrolling
+        if(getSelectedText() != ""){
+          renditionInstance.manager.container.scrollLeft = startingScrollLeft
+
+        }
+        
+      }
+    }
       
   }
   
+  let startingScrollLeft = 0;
+  let currentlySelectingByTouch = false
+  const touchStartHandler = () =>{
+    startingScrollLeft = renditionInstance.manager?.container.scrollLeft || 0
+    currentlySelectingByTouch = true
+  }
+
+
+  const touchEndHandler = () =>{
+    startingScrollLeft = renditionInstance.manager?.container.scrollLeft || 0
+    currentlySelectingByTouch = true
+  }
   
   renditionInstance.on("attached", renditionAttachmentHandler)
   renditionInstance.on("locationChanged", pageTurnHandler)
@@ -511,6 +717,8 @@ export default (renditionInstance: Rendition, view: number)=>{
   renditionInstance.on('rendered', redrawAnnotations)
   window.addEventListener('keydown', keyboardEventsHandler)
   window.addEventListener("wheel", scrollEventsHandler);
+  renditionInstance.on("touchstart", touchStartHandler);
+  renditionInstance.on("touchend", touchEndHandler);
 
 
 

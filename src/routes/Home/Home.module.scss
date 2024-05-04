@@ -1,7 +1,6 @@
 
 // @import "./dynamic.css";
 @use 'breakpoints.scss' as *;
-@use 'test.module.scss' as *;
 
 // These constants will match the bookmark.SVG default size.
 // Used for resize calculations
@@ -68,6 +67,7 @@ $bookRadius: 5px;
   > *{
     pointer-events: all;
   }
+
 }
 
 .unstyleLink{
@@ -331,6 +331,9 @@ $bookRadius: 5px;
   background-color: var(--background-secondary);
   color: var(--text-primary);
   border: none;
+
+  // Needed to fix bug with tablet support on titlebar. clicks do not register otherwise.
+  -webkit-app-region: no-drag;
 }
 
 .searchbarDesktop:focus{
@@ -558,4 +561,19 @@ $bottom-bar-width-standard: 650px;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+
+.iconButton{
+  transition: 0.15s;
+  color: var(--text-secondary);
+  padding: 0 5px 0 5px;
+  width:34px;
+  &:hover{
+    color: var(--text-primary);
+    opacity: 0.8;
+  }
+  &:active{
+    opacity: 0.5;
+  }
 }

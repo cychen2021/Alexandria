@@ -8,6 +8,8 @@ import styles from './Fonts.module.scss'
 
 import SaveIcon from '@resources/iconmonstr/iconmonstr-save-14.svg'
 import TashIcon from '@resources/feathericons/trash-2.svg'
+import CloudIcon from '@resources/iconmonstr/iconmonstr-cloud-download-thin.svg'
+import ComputerIcon from '@resources/iconmonstr/iconmonstr-computer-10.svg'
 import { invoke } from "@tauri-apps/api";
 import { convertFileSrc } from "@tauri-apps/api/tauri";
 import { platform } from '@tauri-apps/api/os';
@@ -16,6 +18,7 @@ import { platform } from '@tauri-apps/api/os';
 
 import webfonts from '@resources/Alexandria-Assets/webfonts.json'
 import toast from "react-hot-toast";
+import { useAppSelector } from "@store/hooks";
 const myStyle = webfonts.items.map((item) => { return {name:item.family, link:item.files.regular,menu:item.menu, files: item.files}})
 
 
@@ -26,7 +29,7 @@ const defaultMarks = [100,200,300,400,500,600,700,800].reduce((a, v)=>{
   }}
   
 },{})
-type ListFontsType = { fontMap: {[key: string]: boolean} };
+type ListFontsType =  {[key: string]: boolean} ;
 const FontManager = (props:any)=>{
 
   const [textFiltered, setTextFilter] = useState("")
@@ -37,18 +40,25 @@ const FontManager = (props:any)=>{
   const [selectedWeight, setSelectedWeight] = useState(500)
   const [currentDataList, setCurrentDataList] = useState(myStyle)
 
+ 
+  const localFontList = useAppSelector((state)=> state.appState.state.localSystemFonts || {})
+  const [localFontListFiltered, SetLocalFontsListFiltered] = useState(localFontList)
+
   useEffect(()=>{
     platform().then((result)=>{
       let IS_LINUX = false
       if(result == "linux"){
         IS_LINUX = true
       }
+
       invoke("list_fonts").then((response)=>{
         const typedResponse = response as ListFontsType
-        // console.log(response.fontMap)
-        setFontList(typedResponse.fontMap)
-        Object.keys(typedResponse.fontMap).forEach((item)=>{
-          // console.log(item)
+        setFontList(typedResponse)
+        Object.keys(typedResponse).forEach((item)=>{
+          // If not true, meaning a system font, continue
+          if(!typedResponse[item]){
+            return
+          }
           invoke("get_font_urls", {name: item}).then((paths)=>{
             const typedPaths = paths as [string]
             const newPath = typedPaths.find((path)=> path.includes("400.ttf"))
@@ -65,7 +75,7 @@ const FontManager = (props:any)=>{
             if(IS_LINUX){
               fontSource = encodeURI("http://127.0.0.1:16780/" + newPath.split('/').slice(-4).join("/"))
             }
-            const font = new FontFace(fontName, `url(${fontSource}) format('truetype')`);
+            const font = new FontFace(fontName, `url("${fontSource}") format('truetype')`);
             //   // wait for font to be loaded
             font.load().then(()=>{
               document.fonts.add(font);
@@ -84,6 +94,9 @@ const FontManager = (props:any)=>{
     })
 
   }, [])
+  const localFontListKeys = Object.keys(localFontListFiltered)
+  const installedFonts = Object.keys(fontList)
+  const installedFontsLength = textFiltered == "" ? installedFonts.length: 0
   return (
     <div className={styles.themeContainer}>
       
@@ -97,13 +110,15 @@ const FontManager = (props:any)=>{
       <div className={styles.fontPreviewText}>Font Preview: </div>
       <div className={styles.fontRow}>
         <div></div>
-        <div style={{fontFamily:selectedFont, fontWeight: selectedWeight}}>{selectedFont}</div>
+        <div style={{fontFamily:selectedFont, fontWeight: selectedWeight, fontSize:28}}>{selectedFont}</div>
         <div></div>
       </div>
 
       <div className={styles.sliderContainer}>
+        {(selectedFont in localFontListFiltered)?<div></div>:
+          <link href={`https://fonts.googleapis.com/css2?family=${selectedFont}:wght@${Object.keys(availableMarks).reduce((a, v)=>{return (a==""? a + v: a + ";" + v)},"")}&display=swap`} rel="stylesheet"></link>
       
-        <link href={`https://fonts.googleapis.com/css2?family=${selectedFont}:wght@${Object.keys(availableMarks).reduce((a, v)=>{return (a==""? a + v: a + ";" + v)},"")}&display=swap`} rel="stylesheet"></link>
+        }
       
         <div style={{height:25, "visibility":Object.keys(availableMarks).length == 1?"hidden":"visible"}}>
           <Slider
@@ -131,39 +146,101 @@ const FontManager = (props:any)=>{
           console.log(e.target.value,e.target.value.length)
           setTextFilter(e.target.value)
           setCurrentDataList(myStyle.filter((item)=>item.name.toLowerCase().includes(e.target.value.toLowerCase())))
+          
+          type objType = typeof localFontList
+          const filterObjects = (obj:objType, predicate:any) =>  Object.fromEntries(Object.entries(obj).filter(predicate));
+          SetLocalFontsListFiltered(
+            filterObjects(localFontList, ([key, value])=>{
+              return key.toLowerCase().includes(e.target.value.toLowerCase())
+            }
+          
+            ))
+          
         }} value={textFiltered} style={{display:"block"}} className={styles.comboTextBox}/>
       </div>
 
       {/* <div style={{backgroundColor:"white"}}>Installed & Enabled Fonts</div> */}
       <div className={styles.listContainer}>
-        <Virtuoso style={{ height: '100%' }} totalCount={Object.keys(fontList).length + currentDataList.length} itemContent={index => {
+        <Virtuoso style={{ height: '100%' }} totalCount={installedFontsLength + Object.keys(localFontListFiltered).length + currentDataList.length} itemContent={index => {
 
-          const mappedFontName = Object.keys(fontList)[index]
-          if(index < Object.keys(fontList).length){
+
+
+          const mappedFontName = installedFonts[index]
+          
+          if(index < installedFontsLength){
             return (<div className={styles.localThemeContainer}>
               <div className={styles.localButtonsContainer}>
                 <TashIcon onClick={()=>{
                   const filtered = Object.fromEntries(Object.entries(fontList).filter(([k,v]) => k != mappedFontName));
+
                   setFontList(filtered)
+
+
                   invoke("delete_font", {name: mappedFontName}).then(()=>{
                     console.log("Font deleted")
                   })
                 }} className={styles.trash}/>     
-                <input style={{display:"none"}} className={styles.selector} checked={fontList[mappedFontName]} type="radio" onChange={()=>{/*Removes error from console */}} onClick={()=>{
-                  const newObj = {} as {[key: string]: boolean}
-                  newObj[mappedFontName] = !fontList[mappedFontName]
-                  const newList = {...fontList, ...newObj}
-                  setFontList(newList)
-                  invoke("toggle_font", {name: mappedFontName})
-                }}/>
+
               </div>
-              <label className={`${styles.fontNameBox} ${styles.label}`} style={{fontFamily:mappedFontName.split(".")[0].replaceAll(" ", "_")}}>{Object.keys(fontList)[index]}</label>
+              <div className={`${styles.fontNameBox} ${styles.label}`} style={{fontFamily:mappedFontName.split(".")[0].replaceAll(" ", "_") + "," + mappedFontName}}>{mappedFontName}</div>
               <div className={styles.remoteButtonsContainer}> 
                 {/* <SaveIcon/> */}
               </div>
             </div>)
+
+          }else if (index < installedFontsLength + Object.keys(localFontListFiltered).length){
+            
+            const localFontFamily = localFontListKeys[index - installedFontsLength]
+            // console.log(localFontFamily, localFontFamily, index)
+
+            return (
+
+              <div onClick={()=> {
+                setSelectedFont(localFontFamily)
+                console.log(localFontList[localFontFamily])
+                const mapped = localFontList[localFontFamily].reduce((a, v)=>{
+                  if(v.includes("italic")){
+                    return a
+                  }
+                  return {...a, ...{
+                    [v=="regular"?400:v]:{label: <div style={{fontWeight:v}}>{v}</div>}
+                  }}
+                  
+                },{})
+                console.log(mapped)
+                setAvailableMarks(mapped)
+                setSelectedWeight(400)
+              }} className={styles.localThemeContainer} style={
+                {
+                  // fontWeight:(selectedFont == localFontFamily? "bold":""), 
+                  backgroundColor:(selectedFont == localFontFamily? "var(--background-secondary)":""), 
+                  // border:(selectedFont == currentDataList[modifiedIndex].name? "2px solid var(--background-primary)":""), 
+                  // fontFamily:localFontFamily
+                }
+                
+              }>
+                <div className={styles.localButtonsContainer}>
+                  {!installedFonts.includes(localFontFamily)?<ComputerIcon className={styles.sourceIcon}/>:<div></div>}
+
+                </div>
+                <div className={`${styles.fontNameBox}`} style={{fontFamily:localFontFamily}}>{localFontFamily} </div>
+                <div className={styles.remoteButtonsContainer}> 
+                  {(selectedFont == localFontFamily) && !Object.keys(fontList).includes(selectedFont)? 
+                    <SaveIcon style={{marginRight:30}} onClick={async ()=>{
+
+                      invoke("add_system_font",{name: localFontFamily})
+                      const cloned = {...fontList}
+                      cloned[localFontFamily] = true
+                      setFontList(cloned)
+        
+                    }}/>
+                
+                    :Object.keys(fontList).includes(localFontFamily)?<div style={{fontFamily:"noto sans"}}>Font Saved</div>:<div/>}
+                </div>
+              </div>
+            )
           }else{
-            const modifiedIndex = index - Object.keys(fontList).length
+            const modifiedIndex = index - (installedFontsLength + Object.keys(localFontListFiltered).length)
             return (<div onClick={()=> {
               setSelectedFont(currentDataList[modifiedIndex].name)
               console.log(Object.keys(currentDataList[modifiedIndex].files))
@@ -187,7 +264,7 @@ const FontManager = (props:any)=>{
                 fontFamily:currentDataList[modifiedIndex].name}
               
             }>
-              <div className={styles.localButtonsContainer}/>
+              <div className={styles.localButtonsContainer}> {Object.keys(fontList).includes(currentDataList[modifiedIndex].name)?<div/>:<CloudIcon className={styles.sourceIcon}/>}</div>
               <div className={styles.fontNameBox}>
                 {currentDataList[modifiedIndex].name}
                 <style>

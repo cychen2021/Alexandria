@@ -8,7 +8,8 @@ export interface defaultAppState {
       sortBy: string,
       readerMargins: number,
       state:{
-        fullscreen: bool,
+        localSystemFonts: {[fontName: string]: Array<string>},
+        maximized: bool,
         selectedRendition: number,
         dualReaderMode: boolean,
         dualReaderReversed: boolean,
@@ -17,6 +18,11 @@ export interface defaultAppState {
         themeMenuActive: boolean,
         menuToggled: boolean,
         progressMenuActive:boolean,
+        footnote:{
+          active: boolean,
+          text:string,
+          link: string
+        }
         modals:{
           selectedCFI: string,
           quickbarModal: {visible: boolean, x:number, y:number},

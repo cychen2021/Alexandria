@@ -1,6 +1,6 @@
-<h1 align="center">Alexandria</h1>
+ <h1 align="center"><img height="60px" width="60px" align="center" src="https://raw.githubusercontent.com/btpf/Alexandria/main/public/resources/logo.svg"> Alexandria</h1>
 <div align="center">A minimalistic cross platform eBook reader, built with Tauri ❤️ Epub.js</div>
-<div align="center"><a href="/#Download">Download</a> | <a href="/">Website</a> |  <a href="/docs/FAQ.md">FAQ</a></div>
+<div align="center"><a href="/#Download">Download</a> |  <a href="/docs/FAQ.md">FAQ</a> |  <a href="/docs/Build%20Instructions.md">Build Instructions</a></div>
 <br>
 
 <div align="center"><a href="/"> <img align="center" src="https://github.com/btpf/Alexandria/assets/61168382/6ff644fa-b4bf-4a8b-bc85-c1f44c21b2a3"> </div>
@@ -9,14 +9,15 @@
 ## Main Features:
 
 <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg"> = Completed
-<img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Yellow circle/Flat/yellow_circle_flat.svg">  = Work in Progress (For 1.0)
-<img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  = Planned (After 1.0)
+<img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Yellow circle/Flat/yellow_circle_flat.svg">  = Work in Progress
+<img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  = Planned
 
 - Supported Systems:
   - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg"> Windows 8+ (.exe, .msi)
-  - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg">  Linux (.AppImage, .deb)
+  - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg">  Linux (Flatpak, .AppImage, .deb)
+  - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg">  MacOS (.dmg)
   - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  Android
-  - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  IOS & OSx
+  - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  IOS
 - Supported Formats:
   - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg"> EPUB (.epub, .epub3)
   - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg">  Kindle (.azw, .azw3) and Mobipocket (.mobi)
@@ -31,8 +32,6 @@
 - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg"> Adjust Word Spacing, Line Height, and Reader Margins
 - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg">  Highlight Exports
 - <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Green circle/Flat/green_circle_flat.svg">  Split Screen Layout
-- <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  Offline Dictionary Support
-- <img height="18px" width="18px" align="center" src="https://github.com/microsoft/fluentui-emoji/blob/main/assets/Purple circle/Flat/purple_circle_flat.svg">  Cross Platform Syncing
 ## Screenshots:
 <h2 align="center">Default Light & Dark Themes</h2>
 <div align="center"><a href="/"> <img align="center" src="https://github.com/btpf/Alexandria/assets/61168382/46fa4d93-8365-44bd-afd0-eb4bbbdba878"> </div>
@@ -56,13 +55,16 @@ Flatpak:
 ```
 flatpak install io.github.btpf.alexandria
 ```
+<a href="https://github.com/btpf/Alexandria/releases">.AppImage & .deb Builds</a>
+
+[Flatpak Source](https://github.com/flathub/io.github.btpf.alexandria)
 ### Windows:
 
 Builds for windows are provided in <a href="https://github.com/btpf/Alexandria/releases">Releases</a>
 
----
+### MacOS:
 
-<h3><a href="/docs/Build%20Instructions.md">Build Instructions</a></h3>
+The first unsigned builds for MacOS can now be found in <a href="https://github.com/btpf/Alexandria/releases">Releases</a>
 
 ---
 

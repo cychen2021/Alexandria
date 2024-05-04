@@ -22,7 +22,8 @@ const initialState: defaultAppState = {
   sortDirection:"ASC",
   readerMargins: 75,
   state:{
-    fullscreen: false,
+    localSystemFonts: {},
+    maximized: false,
     selectedRendition: 0,
     dualReaderMode: false,
     dualReaderReversed: false,
@@ -31,6 +32,11 @@ const initialState: defaultAppState = {
     menuToggled: true, 
     themeMenuActive: false,
     progressMenuActive: false,
+    footnote:{
+      active: false,
+      text: "",
+      link: ""
+    },
     modals:{
       selectedCFI: "",
       quickbarModal: {visible: false, x:0, y:0},
@@ -83,7 +89,7 @@ export const {
   setSelectedTheme,
   LoadThemes,
 
-  SetFullScreen,
+  SetMaximized,
   SetSortSettings,
   SetSelectedRendition,
   setReaderMargins,
@@ -98,6 +104,9 @@ export const {
   resetBookAppState,
   SetDualReaderReversed,
   ToggleProgressMenu,
+  SetFootnoteActive,
+  HideFootnote,
+  SetLocalFontsList,
 
   /* Modals */
   MoveQuickbarModal,

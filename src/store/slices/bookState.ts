@@ -4,7 +4,7 @@ import {BookInstances} from './bookStateTypes'
 import {actions as stateActions} from './EpubJSBackend/state/stateManager';
 import {actions as dataActions} from './EpubJSBackend/data/dataManager';
 import {actions as epubjsManagerActions, RenditionBuilder} from './EpubJSBackend/epubjsManager';
-import {actions as themeManagerActions, setFontThunk, setLineHeightThunk, setThemeThunk, setWordSpacingThunk} from './EpubJSBackend/data/theme/themeManager';
+import {actions as themeManagerActions, setFontThunk, setLineHeightThunk, setParagraphSpacingThunk, setThemeThunk, setWordSpacingThunk, setTextAlignmentThunk} from './EpubJSBackend/data/theme/themeManager';
 
 // Define the initial state using that type
 const initialState: BookInstances = {}
@@ -33,14 +33,21 @@ const ThemeBuilder = (builder: ActionReducerMapBuilder<BookInstances>) =>{
   builder.addCase(setWordSpacingThunk.pending, (state, action)=>{
     state[action.meta.arg.view].data.theme.wordSpacing = action.meta.arg.value
   })
+  builder.addCase(setParagraphSpacingThunk.pending, (state, action)=>{
+    state[action.meta.arg.view].data.theme.paragraphSpacing = action.meta.arg.value
+  })
+  builder.addCase(setTextAlignmentThunk.pending, (state, action)=>{
+    state[action.meta.arg.view].data.theme.textAlign = action.meta.arg.value
+  })
   builder.addCase(setLineHeightThunk.pending, (state, action)=>{
     state[action.meta.arg.view].data.theme.lineHeight = action.meta.arg.value
   })
 
-  builder.addMatcher(isAnyOf(setThemeThunk.fulfilled, setFontThunk.fulfilled, setWordSpacingThunk.fulfilled, setLineHeightThunk.fulfilled), (state, action)=>{
+  builder.addMatcher(isAnyOf(setThemeThunk.fulfilled,setTextAlignmentThunk.fulfilled, setParagraphSpacingThunk.fulfilled, setFontThunk.fulfilled, setWordSpacingThunk.fulfilled, setLineHeightThunk.fulfilled), (state, action)=>{
     const theme = action.payload.themeBase
     // line-height is facing an issue. When navigating backwards to a from a chapter to the previous
     // Sometimes, you will jump to a page which is not the last.
+
     let css = 
     `body{
       background-color: ${theme.reader.body.background} !important;
@@ -56,17 +63,33 @@ const ThemeBuilder = (builder: ActionReducerMapBuilder<BookInstances>) =>{
       font-size: inherit !important;
       font-weight: inherit !important;
       word-spacing: inherit !important;
-      background-color: inherit;
+      
+      background-color: inherit !important;
+      color: inherit !important;
+      ${action.payload.theme.paragraphSpacing >= 0? `margin-bottom: ${action.payload.theme.paragraphSpacing}px !important;`:""}
+      ${action.payload.theme.textAlign == "default"?"":`text-align: ${action.payload.theme.textAlign} !important;`}
     }
     div{
-      background-color: inherit;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+      word-spacing: inherit !important;
+
+      background-color: inherit !important;
+      color: inherit !important;
     }
     section{
-      background-color: inherit;
+      font-family: inherit !important;
+      font-size: inherit !important;
+      font-weight: inherit !important;
+      word-spacing: inherit !important;
+
+      background-color: inherit !important;
+      color: inherit !important;
     }
     a{
-      color: ${theme.reader.body.link};
-      text-decoration: none;
+      color: ${theme.reader.body.link} !important;
+      text-decoration: none !important;
     }
     img{
         ${`filter: ${theme.reader.image.invert?"invert(100%)":"unset"};`}
@@ -85,6 +108,29 @@ const ThemeBuilder = (builder: ActionReducerMapBuilder<BookInstances>) =>{
 
     const id = uuid.v4();
     // Register Theme object
+    console.log("REGISTERING CSS NAME")
+    console.log(id)
+
+    // Lets add code to remove the old theme
+
+    // First we will remove the old theme from all views
+    const contents = state[action.payload.view].instance.getContents()
+    const oldThemeName = state[action.payload.view].instance.themes._current
+    const themesObject = state[action.payload.view].instance.themes._themes
+    contents.forEach((content)=>{
+
+      const ThemeElement = content.document.getElementById("epubjs-inserted-css-" + oldThemeName)
+      if(ThemeElement){
+        ThemeElement.remove()
+      }
+
+    })
+    // Then remove from _themes
+    if(oldThemeName in themesObject){
+      delete themesObject[oldThemeName]
+    }
+
+
     state[action.payload.view].instance.themes.registerCss(id,css);
     // state[action.payload.view].instance.themes.registerRules(id + "WOW", {body:{color:theme.body.color, background:theme.body.background}});
     // Select Theme

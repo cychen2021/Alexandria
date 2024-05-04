@@ -14,7 +14,7 @@ const FontsContainer = ()=>{
   const fontSize = useAppSelector((state) => state.bookState[selectedRendition]?.data.theme.fontSize)
   const fontWeight = useAppSelector((state) => state.bookState[selectedRendition]?.data.theme.fontWeight)
   const [fontsList, setFontList] = useState<string[]>([])
-  type ListFontsType = { fontMap: {[key: string]: boolean} };
+  type ListFontsType =  {[key: string]: boolean} ;
 
 
   useEffect(()=>{
@@ -26,12 +26,13 @@ const FontsContainer = ()=>{
       invoke("list_fonts").then((payload)=>{
         const typedPayload = (payload as ListFontsType)
         const tempList:Array<string> = []
-        Object.keys(typedPayload.fontMap).forEach((item)=>{
+        Object.keys(typedPayload).forEach((item)=>{
           
           
-          // console.log(item)
-          if(typedPayload.fontMap[item]){
-            tempList.push(item)
+          // if true, meaning the font was downloaded
+          
+          tempList.push(item)
+          if(typedPayload[item]){
             invoke("get_font_url", {name: item}).then((path)=>{
               console.log("This should be my path::::")
               console.log(path)
@@ -41,7 +42,7 @@ const FontsContainer = ()=>{
               }
               // this means if the name has an extension like .ttf
               const fontName = item.replaceAll(" ", "_")
-              const font = new FontFace(fontName, `url(${IS_LINUX?encodeURI("http://127.0.0.1:16780/" + typedPath.split('/').slice(-4).join("/")):convertFileSrc(typedPath)})`);
+              const font = new FontFace(fontName, `url("${IS_LINUX?encodeURI("http://127.0.0.1:16780/" + typedPath.split('/').slice(-4).join("/")):convertFileSrc(typedPath)}")`);
               // wait for font to be loaded
               font.load().then(()=>{
                 document.fonts.add(font);
@@ -66,7 +67,7 @@ const FontsContainer = ()=>{
               
               dispatch(setFontThunk({view:selectedRendition, font:item}))
               
-            }} style={{fontFamily:item.replaceAll(" ", "_")}} className={styles.font}>
+            }} style={{fontFamily:item.replaceAll(" ", "_") + ', ' + item}} className={styles.font}>
               <div className={styles.fontName}>{item}</div>
             </div>
           )

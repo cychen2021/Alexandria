@@ -24,10 +24,11 @@ import TitleBarButtons  from '@shared/components/TitleBarButtons';
 
 import QuickbarModal from './ReaderView/components/QuickbarModal/QuickbarModal'
 import NoteModal from './ReaderView/components/NoteModal/NoteModal'
-import { resetBookAppState, SelectSidebarMenu, ToggleMenu, ToggleProgressMenu, ToggleThemeMenu } from '@store/slices/appState'
+import { HideFootnote, resetBookAppState, SelectSidebarMenu, ToggleMenu, ToggleProgressMenu, ToggleThemeMenu } from '@store/slices/appState'
 import { appWindow } from '@tauri-apps/api/window'
 import ProgressMenu from './ProgressMenu/ProgressMenu'
-
+import FooterBar from './FooterBar/FooterBar'
+import { platform } from '@tauri-apps/api/os';
 
 const Home = () =>{
   const selectedRendition:number = useAppSelector((state) => state.appState.state.selectedRendition)
@@ -43,11 +44,20 @@ const Home = () =>{
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [mouseOverMenu, setMouseOverMenu] = useState(false)
   const [currentPage, setCurrentPage] = useState('')
+
+
+  // Temporary Bug Fix: This is used as a fix for a Windows 11 tauri bug:
+  // If the window is maximized, and then the fullscreen button is pressed
+  // the window will not become fullscreen and the windows 11 UI will appear glitched.
+  const [wasMaximized, setWasMaximized] = useState(false)
+
+
+
   const params = useParams()
   const sidebarOpen = useAppSelector((state) => state?.appState?.state?.sidebarMenuSelected)
   const dualReaderReversed = useAppSelector((state) => state?.appState?.state?.dualReaderReversed)
   const progressMenuActive = useAppSelector((state) => state?.appState?.state?.progressMenuActive)
-
+  const footnoteActive = useAppSelector((state) => state?.appState?.state?.footnote.active)
 
   const ReaderBackgroundColor = useAppSelector((state) => {
 
@@ -90,7 +100,19 @@ const Home = () =>{
 
 
   const setFullScreenCaller = async (isFullScreen:boolean) =>{
+    const currentlyMaximized = await appWindow.isMaximized()
+    const OS = await platform()
+    const useWorkaround = OS == 'win32'
+    if(useWorkaround && isFullScreen == true && currentlyMaximized){
+      setWasMaximized(true)
+      await appWindow.unmaximize();
+    }
+
     await appWindow.setFullscreen(isFullScreen);
+    if(useWorkaround && isFullScreen == false && wasMaximized){
+      setWasMaximized(false)
+      await appWindow.maximize();
+    }
     setIsFullScreen(isFullScreen);
     // Bug prevention: mouseOff event not detected when fullscreen is set. Menu state becomes glitched.
     setMouseOverMenu(false);
@@ -189,6 +211,7 @@ const Home = () =>{
 
       <Sidebar/>
       <SettingsBar/>
+      <FooterBar/>
       <ProgressMenu/>
       <Dictionary/>
 
@@ -206,7 +229,10 @@ const Home = () =>{
         if(progressMenuActive){
           dispatch(ToggleProgressMenu())
         }
-      }} className={`${styles.opaqueScreen} ${(sidebarOpen||progressMenuActive) && styles.opaqueScreenActive}`}/>
+        if(footnoteActive){
+          dispatch(HideFootnote())
+        }
+      }} className={`${styles.opaqueScreen} ${(sidebarOpen||progressMenuActive|| footnoteActive) && styles.opaqueScreenActive}`}/>
 
     </div>
   )
