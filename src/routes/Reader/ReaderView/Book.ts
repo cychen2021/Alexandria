@@ -1,13 +1,20 @@
-import { Book as EPUBBook } from '@btpf/epubjs';
+import { Book as EPUBBook, EpubCFI } from '@btpf/epubjs';
 import EPUBLocations  from '@btpf/epubjs/types/locations'
 import { RenditionOptions, DisplayedLocation as EPUBDisplayedLocation } from '@btpf/epubjs/types/rendition';
 import { PDFDocumentProxy } from 'pdfjs-dist'
 import { PDFRendition as PDFRendition, Rendition } from '../wrapper'
 
-export class DisplayedLocation {
-  private inner: EPUBDisplayedLocation | null
-  constructor(raw: EPUBDisplayedLocation) {
-    this.inner = raw
+// TODO: Fix this
+export type DisplayedLocation = EPUBDisplayedLocation
+
+// TODO: Fix this
+class PDFLocations {
+  load(_locations: string) {
+
+  }
+
+  generate(chars: number): Promise<Array<string>> {
+    return Promise.resolve([])
   }
 }
 
@@ -36,7 +43,7 @@ export class Book {
     if (this.book instanceof EPUBBook) {
       this.book.destroy()
     } else {
-      //TODO
+      this.book.destroy()
     }
   }
 
@@ -44,17 +51,15 @@ export class Book {
     if (this.book instanceof EPUBBook) {
       return this.book.ready
     } else {
-      // TODO
-      throw new Error("PDF does not support ready")
+      return this.book.loadingTask.promise.then()
     }
   }
 
-  get locations() : EPUBLocations {
+  get locations() : EPUBLocations | PDFLocations {
     if (this.book instanceof EPUBBook) {
       return this.book.locations
     } else {
-      // TODO
-      throw new Error("PDF does not support locations")
+      return new PDFLocations()
     }
   }
 }
